@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/zhangxiaofeng05/direct_use_en0/txthinking_socks5"
+	"github.com/zhangxiaofeng05/direct_use_en0/internal/txthinking_socks5"
 )
 
 func main() {

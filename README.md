@@ -1,4 +1,17 @@
 ## direct use en0
+tcp proxy, can configure a front proxy for v2rayn.
+
+only support ipv4.
+
+### install
+```bash
+go install github.com/zhangxiaofeng05/direct_use_en0/cmd/direct_use_en0@dev
+```
+
+### run
+```bash
+direct_use_en0 -port 20808
+```
 
 look at the routing table to see if the default gateway is en0
 ```bash
