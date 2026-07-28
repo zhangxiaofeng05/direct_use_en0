@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/zhangxiaofeng05/direct_use_en0/things_go_go_socks5"
+	"github.com/zhangxiaofeng05/direct_use_en0/txthinking_socks5"
 )
 
 func main() {
@@ -11,7 +11,8 @@ func main() {
 	flag.Parse()
 
 	// armon_go_socks5.Run(*port)
-	things_go_go_socks5.Run(*port)
+	// things_go_go_socks5.Run(*port)
+	txthinking_socks5.Run(*port)
 
 	// direct_use_en0.PrintInterfaceIndex()
 }

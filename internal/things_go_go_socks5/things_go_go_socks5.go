@@ -10,6 +10,7 @@ import (
 )
 
 // reference: https://github.com/things-go/go-socks5/blob/master/_example/main.go
+// github.com/things-go/go-socks5
 func Run(port int) {
 	// Create a SOCKS5 server
 	server := socks5.NewServer(
@@ -19,7 +20,7 @@ func Run(port int) {
 
 	// Create SOCKS5 proxy on localhost port
 	network := "tcp"
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := fmt.Sprintf("%s:%d", direct_use_en0.Ip, port)
 	log.Printf("listening on %s", addr)
 	if err := server.ListenAndServe(network, addr); err != nil {
 		log.Fatal(err)
