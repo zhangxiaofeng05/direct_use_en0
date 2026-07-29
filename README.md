@@ -1,7 +1,7 @@
 ## direct use en0
-tcp proxy, can configure a front proxy for v2rayn.
+tcp proxy. can configure a front proxy for v2rayn or add routes to the routing table.
 
-only support ipv4.
+support ipv4 and ipv6.
 
 ### install
 ```bash
