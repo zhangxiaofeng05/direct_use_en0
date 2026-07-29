@@ -1,7 +1,8 @@
 ## direct use en0
-tcp proxy. can configure a front proxy for v2rayn or add routes to the routing table.
+support ipv4 and ipv6. both tcp and udp are supported.
 
-support ipv4 and ipv6.
+can configure a front proxy for v2rayn or add routes to the routing table.
+
 
 ### install
 ```bash
@@ -18,7 +19,7 @@ look at the routing table to see if the default gateway is en0
 netstat -rn
 ```
 
-
+### add routes to the routing table
 add ipv4 route to the routing table to use en0 as the default gateway
 ```bash
 sudo route -n add -host ipv4 192.168.1.1

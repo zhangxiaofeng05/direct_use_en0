@@ -14,6 +14,20 @@ func Run(port int) {
 	socks5.DialTCP = func(network, _, raddr string) (net.Conn, error) {
 		return direct_use_en0.Dial(context.Background(), network, raddr)
 	}
+	socks5.DialUDP = func(network, laddr, raddr string) (net.Conn, error) {
+		d, err := direct_use_en0.NewDialer(direct_use_en0.En0InterfaceName)
+		if err != nil {
+			return nil, err
+		}
+		if laddr != "" {
+			la, err := net.ResolveUDPAddr(network, laddr)
+			if err != nil {
+				return nil, err
+			}
+			d.LocalAddr = la
+		}
+		return d.DialContext(context.Background(), network, raddr)
+	}
 
 	addr := fmt.Sprintf("%s:%d", direct_use_en0.Ip, port)
 	s, err := socks5.NewClassicServer(addr, direct_use_en0.Ip, "", "", 0, 60)
