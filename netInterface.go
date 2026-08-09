@@ -6,12 +6,12 @@ import (
 )
 
 func PrintInterfaceIndex() {
-	vpnIndex, err := GetInterfaceIndex("utun0")
+	vpnIndex, err := GetInterfaceIndex(Utun0InterfaceName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("vpnIndex: %d", vpnIndex)
-	enIndex, err := GetInterfaceIndex("en0")
+	enIndex, err := GetInterfaceIndex(En0InterfaceName)
 	if err != nil {
 		log.Fatal(err)
 	}
