@@ -67,8 +67,8 @@ func NewDialer(iface string) (*net.Dialer, error) {
 	return d, nil
 }
 
-func Dial(ctx context.Context, network, addr string) (net.Conn, error) {
-	d, err := NewDialer(En0InterfaceName)
+func Dial(ctx context.Context, network, addr string, iface string) (net.Conn, error) {
+	d, err := NewDialer(iface)
 	if err != nil {
 		return nil, err
 	}

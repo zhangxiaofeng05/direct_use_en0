@@ -13,11 +13,11 @@ import (
 	"github.com/zhangxiaofeng05/direct_use_en0/internal/txthinking_socks5"
 )
 
-func CheckIp(port int) {
+func CheckIp(port int, name string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go txthinking_socks5.Run(port)
+	go txthinking_socks5.Run(port, name)
 	time.Sleep(500 * time.Millisecond)
 
 	proxyStr := "socks5://127.0.0.1:" + strconv.Itoa(port)
@@ -38,7 +38,7 @@ func CheckIp(port int) {
 	}
 	diff := cmp.Diff(directGeoIp, proxyGeoIp)
 	if diff == "" {
-		log.Println("ip is same")
+		log.Printf("same ip: %s country: %s city: %s", directGeoIp.Ip, directGeoIp.Country, directGeoIp.City)
 	} else {
 		log.Printf("ip is diff: %v", diff)
 	}

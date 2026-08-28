@@ -10,12 +10,12 @@ import (
 	"github.com/zhangxiaofeng05/direct_use_en0"
 )
 
-func Run(port int) {
+func Run(port int, iface string) {
 	socks5.DialTCP = func(network, _, raddr string) (net.Conn, error) {
-		return direct_use_en0.Dial(context.Background(), network, raddr)
+		return direct_use_en0.Dial(context.Background(), network, raddr, iface)
 	}
 	socks5.DialUDP = func(network, laddr, raddr string) (net.Conn, error) {
-		d, err := direct_use_en0.NewDialer(direct_use_en0.En0InterfaceName)
+		d, err := direct_use_en0.NewDialer(iface)
 		if err != nil {
 			return nil, err
 		}
