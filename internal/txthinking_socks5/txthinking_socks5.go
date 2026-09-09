@@ -35,6 +35,6 @@ func Run(port int, iface string) {
 		log.Fatal(err)
 	}
 
-	log.Printf("listening on %s", addr)
+	log.Printf("SOCKS5 proxy listening on %s", addr)
 	log.Fatal(s.ListenAndServe(nil))
 }
