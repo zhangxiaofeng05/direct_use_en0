@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	port := flag.Int("port", 30808, "port to listen on")
+	port := flag.Int("port", 20808, "port to listen on")
 	interfaceName := flag.String("interfaceName", "en0", "network sinterface name")
 	proxyType := flag.String("proxyType", "mixed", "proxy type: mixed, socks5 or http")
 	flag.Parse()
