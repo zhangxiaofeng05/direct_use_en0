@@ -1,5 +1,7 @@
 package direct_use_en0
 
+import "fmt"
+
 const (
 	En0InterfaceName   = "en0"
 	Utun0InterfaceName = "utun0"
@@ -13,3 +15,8 @@ const (
 	// listen ip, only for local access
 	Ip = "127.0.0.1"
 )
+
+// Addr returns the listen address for the given port.
+func Addr(port int) string {
+	return fmt.Sprintf("%s:%d", Ip, port)
+}

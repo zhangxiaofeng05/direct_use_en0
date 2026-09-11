@@ -3,7 +3,6 @@ package http_proxy
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -15,22 +14,26 @@ import (
 	"github.com/zhangxiaofeng05/direct_use_en0"
 )
 
-var (
+// Proxy is an HTTP proxy that dials through a specific network interface.
+type Proxy struct {
 	ipv4Dialer *net.Dialer
 	ipv6Dialer *net.Dialer
 
 	transport *http.Transport
-)
+}
 
-func Run(port int, iface string) {
+// NewProxy creates a Proxy bound to the given network interface.
+func NewProxy(iface string) (*Proxy, error) {
 	ipv4, ipv6, err := getInterfaceIPs(iface)
 	if err != nil {
-		log.Fatalf("get interface IP failed: %v", err)
+		return nil, err
 	}
+
+	p := &Proxy{}
 
 	if ipv4 != nil {
 		log.Printf("IPv4: %s", ipv4)
-		ipv4Dialer = &net.Dialer{
+		p.ipv4Dialer = &net.Dialer{
 			LocalAddr: &net.TCPAddr{
 				IP: ipv4,
 			},
@@ -41,7 +44,7 @@ func Run(port int, iface string) {
 
 	if ipv6 != nil {
 		log.Printf("IPv6: %s", ipv6)
-		ipv6Dialer = &net.Dialer{
+		p.ipv6Dialer = &net.Dialer{
 			LocalAddr: &net.TCPAddr{
 				IP: ipv6,
 			},
@@ -50,26 +53,39 @@ func Run(port int, iface string) {
 		}
 	}
 
-	if ipv4Dialer == nil && ipv6Dialer == nil {
-		log.Fatal("no usable IPv4 or IPv6 address found")
+	if p.ipv4Dialer == nil && p.ipv6Dialer == nil {
+		return nil, errors.New("no usable IPv4 or IPv6 address found")
 	}
 
-	transport = &http.Transport{
-		Proxy:               nil,
-		DialContext:         dialContext,
-		ForceAttemptHTTP2:   false,
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 20,
-		IdleConnTimeout:     90 * time.Second,
-
+	p.transport = &http.Transport{
+		Proxy:                 nil,
+		DialContext:           p.dialContext,
+		ForceAttemptHTTP2:     false,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   20,
+		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	addr := fmt.Sprintf("%s:%d", direct_use_en0.Ip, port)
+	return p, nil
+}
+
+// Handler returns the http.Handler that serves HTTP proxy requests.
+func (p *Proxy) Handler() http.Handler {
+	return http.HandlerFunc(p.proxyHandler)
+}
+
+func Run(port int, iface string) {
+	p, err := NewProxy(iface)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	addr := direct_use_en0.Addr(port)
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      http.HandlerFunc(proxyHandler),
+		Handler:      p.Handler(),
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
 	}
@@ -135,7 +151,7 @@ func getInterfaceIPs(name string) (net.IP, net.IP, error) {
 }
 
 // Select the IPv4 or IPv6 dialer based on the final destination IP address.
-func dialContext(
+func (p *Proxy) dialContext(
 	ctx context.Context,
 	network string,
 	address string,
@@ -147,7 +163,7 @@ func dialContext(
 
 	// the address is already an IP address
 	if ip := net.ParseIP(host); ip != nil {
-		return dialIP(ctx, ip, port)
+		return p.dialIP(ctx, ip, port)
 	}
 
 	// resolve all addresses for the domain
@@ -161,11 +177,11 @@ func dialContext(
 	// try IPv6 first
 	for _, ipAddr := range ips {
 		if ipAddr.IP.To4() == nil {
-			if ipv6Dialer == nil {
+			if p.ipv6Dialer == nil {
 				continue
 			}
 
-			conn, err := ipv6Dialer.DialContext(
+			conn, err := p.ipv6Dialer.DialContext(
 				ctx,
 				"tcp6",
 				net.JoinHostPort(ipAddr.IP.String(), port),
@@ -182,11 +198,11 @@ func dialContext(
 	// try IPv4 next
 	for _, ipAddr := range ips {
 		if ipAddr.IP.To4() != nil {
-			if ipv4Dialer == nil {
+			if p.ipv4Dialer == nil {
 				continue
 			}
 
-			conn, err := ipv4Dialer.DialContext(
+			conn, err := p.ipv4Dialer.DialContext(
 				ctx,
 				"tcp4",
 				net.JoinHostPort(ipAddr.IP.String(), port),
@@ -207,16 +223,16 @@ func dialContext(
 	return nil, errors.New("no suitable address available")
 }
 
-func proxyHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodConnect {
-		handleConnect(w, r)
+		p.handleConnect(w, r)
 		return
 	}
 
-	handleHTTP(w, r)
+	p.handleHTTP(w, r)
 }
 
-func handleHTTP(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	if !r.URL.IsAbs() {
 		http.Error(
 			w,
@@ -230,7 +246,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	removeHopHeaders(r.Header)
 
-	resp, err := transport.RoundTrip(r)
+	resp, err := p.transport.RoundTrip(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -251,7 +267,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, resp.Body)
 }
 
-func handleConnect(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	target := r.Host
 
 	if !strings.Contains(target, ":") {
@@ -286,7 +302,7 @@ func handleConnect(w http.ResponseWriter, r *http.Request) {
 	)
 	defer cancel()
 
-	targetConn, err := dialContext(ctx, "tcp", target)
+	targetConn, err := p.dialContext(ctx, "tcp", target)
 	if err != nil {
 		_, _ = clientConn.Write(
 			[]byte("HTTP/1.1 502 Bad Gateway\r\n\r\n"),
@@ -313,9 +329,7 @@ func handleConnect(w http.ResponseWriter, r *http.Request) {
 		// attack after data loss after the CONNECT request
 		_, _ = io.Copy(targetConn, rw.Reader)
 
-		if tcpConn, ok := targetConn.(*net.TCPConn); ok {
-			_ = tcpConn.CloseWrite()
-		}
+		closeWrite(targetConn)
 	}()
 
 	go func() {
@@ -323,12 +337,22 @@ func handleConnect(w http.ResponseWriter, r *http.Request) {
 
 		_, _ = io.Copy(clientConn, targetConn)
 
-		if tcpConn, ok := clientConn.(*net.TCPConn); ok {
-			_ = tcpConn.CloseWrite()
-		}
+		closeWrite(clientConn)
 	}()
 
 	wg.Wait()
+}
+
+// closeWriter is implemented by *net.TCPConn and by wrapper connections
+// around one.
+type closeWriter interface {
+	CloseWrite() error
+}
+
+func closeWrite(conn net.Conn) {
+	if cw, ok := conn.(closeWriter); ok {
+		_ = cw.CloseWrite()
+	}
 }
 
 func removeHopHeaders(header http.Header) {
@@ -347,28 +371,28 @@ func removeHopHeaders(header http.Header) {
 	}
 }
 
-func dialIP(
+func (p *Proxy) dialIP(
 	ctx context.Context,
 	ip net.IP,
 	port string,
 ) (net.Conn, error) {
 	if ip.To4() != nil {
-		if ipv4Dialer == nil {
+		if p.ipv4Dialer == nil {
 			return nil, errors.New("IPv4 dialer not available")
 		}
 
-		return ipv4Dialer.DialContext(
+		return p.ipv4Dialer.DialContext(
 			ctx,
 			"tcp4",
 			net.JoinHostPort(ip.String(), port),
 		)
 	}
 
-	if ipv6Dialer == nil {
+	if p.ipv6Dialer == nil {
 		return nil, errors.New("IPv6 dialer not available")
 	}
 
-	return ipv6Dialer.DialContext(
+	return p.ipv6Dialer.DialContext(
 		ctx,
 		"tcp6",
 		net.JoinHostPort(ip.String(), port),

@@ -14,6 +14,41 @@ go install github.com/zhangxiaofeng05/direct_use_en0/cmd/direct_use_en0@dev
 direct_use_en0 -port 20808
 ```
 
+`-proxyType` supports `mixed` (default), `socks5` and `http`. `mixed` serves
+SOCKS5 and HTTP proxy clients on the same port, the protocol is detected
+per connection. `-proxyType socks5` or `-proxyType http` run a single
+protocol server.
+
+```bash
+curl -x socks5://127.0.0.1:20808 https://api.ip.sb/ip
+curl -x http://127.0.0.1:20808 https://api.ip.sb/ip
+```
+SOCKS5 is recommended.
+
+### terminal use proxy
+```bash
+# function to enable terminal proxy
+function set_proxy() {
+  # HTTPS proxy (recommended)
+  # export HTTPS_PROXY=https://proxy.example.com:8080
+  # HTTP proxy (if HTTPS not available)
+  # export HTTP_PROXY=http://proxy.example.com:8080
+
+  # export HTTP_PROXY=http://127.0.0.1:20808
+  export HTTP_PROXY=socks5://127.0.0.1:20808
+  export HTTPS_PROXY=$HTTP_PROXY
+  export ALL_PROXY=$HTTP_PROXY
+  echo -e "Proxy is ON"
+}
+# function to disable the terminal proxy
+function unset_proxy(){
+    unset HTTP_PROXY HTTPS_PROXY ALL_PROXY
+    echo -e "Proxy is OFF"
+}
+# Bypass proxy for local server (required)
+export NO_PROXY=localhost,127.0.0.1,::1
+```
+
 look at the routing table to see if the default gateway is en0
 ```bash
 netstat -rn
