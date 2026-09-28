@@ -3,6 +3,39 @@ support ipv4 and ipv6. both tcp and udp are supported.
 
 can configure a front proxy for v2rayn or add routes to the routing table.
 
+### how it works: proxy vs VPN routing
+
+When both a VPN and this proxy are active, browser traffic takes different paths:
+
+```mermaid
+flowchart LR
+    subgraph VPN["VPN only (default)"]
+        A1[Browser] -->|all traffic| B1[VPN utun interface]
+        B1 --> C1[VPN server]
+        C1 --> D1[Internet]
+    end
+
+    subgraph Proxy["direct_use_en0 proxy"]
+        A2[Browser] -->|SOCKS5/HTTP via 127.0.0.1:20808| B2[direct_use_en0]
+        B2 -->|IP_BOUND_IF en0| C2[Physical en0 interface]
+        C2 --> D2[Internet]
+    end
+
+    subgraph Comparison["Key differences"]
+        E1["VPN: ALL traffic tunneled through utun*"]
+        E2["Proxy: ONLY browser traffic via en0, rest via VPN"]
+        E3["VPN: exit IP = VPN server"]
+        E4["Proxy: exit IP = real ISP IP"]
+    end
+```
+
+| | VPN | direct_use_en0 proxy |
+|---|---|---|
+| Browser traffic | Through VPN tunnel | Direct via en0 (bypasses VPN) |
+| Other apps | Through VPN tunnel | Through VPN tunnel (unchanged) |
+| Exit IP | VPN server IP | Real ISP public IP |
+| Interface | utun* | en0 |
+
 
 ### install
 ```bash
