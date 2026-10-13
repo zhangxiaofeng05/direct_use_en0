@@ -2,6 +2,7 @@ package txthinking_socks5
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -11,12 +12,46 @@ import (
 
 // NewServer creates a SOCKS5 server bound to the given network interface.
 // It overrides the package-level socks5.DialTCP / socks5.DialUDP dialers,
-// which is a process-wide side effect.
-func NewServer(port int, iface string) (*socks5.Server, error) {
+// which is a process-wide side effect. When a SOCKS5 client sends a domain
+// name (rather than an IP address), it is first resolved via the provided
+// resolver before dialing through the bound interface.
+func NewServer(port int, iface string, resolver *direct_use_en0.Resolver) (*socks5.Server, error) {
 	socks5.DialTCP = func(network, _, raddr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(raddr)
+		if err != nil {
+			return nil, err
+		}
+		// Resolve domain names via the custom resolver before dialing
+		if net.ParseIP(host) == nil {
+			ips, err := resolver.LookupIPAddr(context.Background(), host)
+			if err != nil {
+				return nil, err
+			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no addresses found for %s", host)
+			}
+			host = ips[0].IP.String()
+			raddr = net.JoinHostPort(host, port)
+		}
 		return direct_use_en0.Dial(context.Background(), network, raddr, iface)
 	}
 	socks5.DialUDP = func(network, laddr, raddr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(raddr)
+		if err != nil {
+			return nil, err
+		}
+		// Resolve domain names via the custom resolver before dialing
+		if net.ParseIP(host) == nil {
+			ips, err := resolver.LookupIPAddr(context.Background(), host)
+			if err != nil {
+				return nil, err
+			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no addresses found for %s", host)
+			}
+			host = ips[0].IP.String()
+			raddr = net.JoinHostPort(host, port)
+		}
 		d, err := direct_use_en0.NewDialer(iface)
 		if err != nil {
 			return nil, err
@@ -40,8 +75,8 @@ func NewServer(port int, iface string) (*socks5.Server, error) {
 	return s, nil
 }
 
-func Run(port int, iface string) {
-	s, err := NewServer(port, iface)
+func Run(port int, iface string, resolver *direct_use_en0.Resolver) {
+	s, err := NewServer(port, iface, resolver)
 	if err != nil {
 		log.Fatal(err)
 	}

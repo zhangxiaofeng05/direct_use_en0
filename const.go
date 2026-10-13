@@ -14,6 +14,10 @@ const (
 
 	// listen ip, only for local access
 	Ip = "127.0.0.1"
+
+	// Default DNS settings
+	DefaultDNSMode    = "udp"
+	DefaultDNSServers = "8.8.8.8,1.1.1.1"
 )
 
 // Addr returns the listen address for the given port.

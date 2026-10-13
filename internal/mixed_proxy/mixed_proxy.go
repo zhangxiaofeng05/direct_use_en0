@@ -17,13 +17,13 @@ import (
 // Run starts a proxy that serves both SOCKS5 and HTTP proxy clients on
 // the same port. The protocol is detected per connection: SOCKS5 starts
 // with the version byte 0x05, HTTP starts with a request method.
-func Run(port int, iface string) {
-	s, err := txthinking_socks5.NewServer(port, iface)
+func Run(port int, iface string, resolver *direct_use_en0.Resolver) {
+	s, err := txthinking_socks5.NewServer(port, iface, resolver)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	p, err := http_proxy.NewProxy(iface)
+	p, err := http_proxy.NewProxy(iface, resolver)
 	if err != nil {
 		log.Fatal(err)
 	}

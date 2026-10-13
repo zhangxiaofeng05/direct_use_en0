@@ -18,18 +18,19 @@ import (
 type Proxy struct {
 	ipv4Dialer *net.Dialer
 	ipv6Dialer *net.Dialer
+	resolver   *direct_use_en0.Resolver
 
 	transport *http.Transport
 }
 
 // NewProxy creates a Proxy bound to the given network interface.
-func NewProxy(iface string) (*Proxy, error) {
+func NewProxy(iface string, resolver *direct_use_en0.Resolver) (*Proxy, error) {
 	ipv4, ipv6, err := getInterfaceIPs(iface)
 	if err != nil {
 		return nil, err
 	}
 
-	p := &Proxy{}
+	p := &Proxy{resolver: resolver}
 
 	if ipv4 != nil {
 		log.Printf("IPv4: %s", ipv4)
@@ -76,8 +77,8 @@ func (p *Proxy) Handler() http.Handler {
 	return http.HandlerFunc(p.proxyHandler)
 }
 
-func Run(port int, iface string) {
-	p, err := NewProxy(iface)
+func Run(port int, iface string, resolver *direct_use_en0.Resolver) {
+	p, err := NewProxy(iface, resolver)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,8 +167,8 @@ func (p *Proxy) dialContext(
 		return p.dialIP(ctx, ip, port)
 	}
 
-	// resolve all addresses for the domain
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	// resolve all addresses for the domain using the custom resolver
+	ips, err := p.resolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		return nil, err
 	}
