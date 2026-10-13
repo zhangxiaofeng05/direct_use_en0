@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"syscall"
 	"time"
 
 	socks5 "github.com/txthinking/socks5"
@@ -78,6 +79,13 @@ func handleConn(s *socks5.Server, httpSrv *http.Server, c *net.TCPConn) {
 	serveHTTP(httpSrv, &prefixConn{Conn: c, prefix: first[:]})
 }
 
+// isClientDisconnect reports whether err was caused by the client closing
+// the connection (broken pipe or connection reset). These are normal in a
+// proxy — the client simply went away — and should not be logged as errors.
+func isClientDisconnect(err error) bool {
+	return errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET)
+}
+
 // serveSocks5 handles a SOCKS5 connection whose version byte has already
 // been consumed. The byte is replayed for the handshake, which reads
 // exactly the bytes it needs, so the original connection can then be
@@ -87,16 +95,22 @@ func serveSocks5(s *socks5.Server, c *net.TCPConn, version byte) {
 
 	rw := &prefixConn{Conn: c, prefix: []byte{version}}
 	if err := s.Negotiate(rw); err != nil {
-		log.Println(err)
+		if !isClientDisconnect(err) {
+			log.Println(err)
+		}
 		return
 	}
 	r, err := s.GetRequest(rw)
 	if err != nil {
-		log.Println(err)
+		if !isClientDisconnect(err) {
+			log.Println(err)
+		}
 		return
 	}
 	if err := s.Handle.TCPHandle(s, c, r); err != nil {
-		log.Println(err)
+		if !isClientDisconnect(err) {
+			log.Println(err)
+		}
 	}
 }
 

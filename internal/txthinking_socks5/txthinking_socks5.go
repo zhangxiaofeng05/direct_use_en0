@@ -2,9 +2,11 @@ package txthinking_socks5
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
+	"syscall"
 
 	socks5 "github.com/txthinking/socks5"
 	"github.com/zhangxiaofeng05/direct_use_en0"
@@ -130,7 +132,12 @@ func ListenAndServeUDP(s *socks5.Server) error {
 				return
 			}
 			if err := s.Handle.UDPHandle(s, addr, d); err != nil {
-				log.Println(err)
+				// Ignore errors caused by the client going away (ICMP
+				// port unreachable surfaces as ECONNRESET on UDP sockets).
+				if !errors.Is(err, syscall.EPIPE) &&
+					!errors.Is(err, syscall.ECONNRESET) {
+					log.Println(err)
+				}
 			}
 		}(addr, b[0:n])
 	}
