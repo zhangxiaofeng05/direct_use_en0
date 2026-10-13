@@ -18,19 +18,26 @@ func main() {
 	proxyType := flag.String("proxyType", "mixed", "proxy type: mixed, socks5 or http")
 
 	// DNS flags — can also be set via DNS_SERVERS / DNS_MODE env vars
+	enableDNS := flag.Bool("dns", false, "enable custom DNS resolver (bypass system DNS)")
 	dnsServers := flag.String("dnsServers", envOr("DNS_SERVERS", "8.8.8.8,1.1.1.1"),
 		"comma-separated DNS server list (e.g. 8.8.8.8,1.1.1.1)")
 	dnsMode := flag.String("dnsMode", envOr("DNS_MODE", "udp"),
 		"DNS mode: udp, tcp, doh, or dot")
 	flag.Parse()
 
-	servers := parseServers(*dnsServers)
-	resolver, err := direct_use_en0.NewResolver(*interfaceName, servers, *dnsMode)
-	if err != nil {
-		log.Fatalf("Failed to create DNS resolver: %v", err)
+	var resolver *direct_use_en0.Resolver
+	if *enableDNS {
+		servers := parseServers(*dnsServers)
+		r, err := direct_use_en0.NewResolver(*interfaceName, servers, *dnsMode)
+		if err != nil {
+			log.Fatalf("Failed to create DNS resolver: %v", err)
+		}
+		resolver = r
+		log.Printf("DNS resolver: mode=%s servers=%v interface=%s",
+			*dnsMode, servers, *interfaceName)
+	} else {
+		log.Println("DNS resolver: disabled (using system DNS)")
 	}
-
-	log.Printf("DNS resolver: mode=%s servers=%v interface=%s", *dnsMode, servers, *interfaceName)
 
 	switch *proxyType {
 	case "mixed":

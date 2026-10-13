@@ -21,9 +21,16 @@ func NewServer(port int, iface string, resolver *direct_use_en0.Resolver) (*sock
 		if err != nil {
 			return nil, err
 		}
-		// Resolve domain names via the custom resolver before dialing
+		// Resolve domain names via the custom resolver (or system default)
+		// before dialing through the bound interface
 		if net.ParseIP(host) == nil {
-			ips, err := resolver.LookupIPAddr(context.Background(), host)
+			var ips []net.IPAddr
+			var err error
+			if resolver != nil {
+				ips, err = resolver.LookupIPAddr(context.Background(), host)
+			} else {
+				ips, err = net.DefaultResolver.LookupIPAddr(context.Background(), host)
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -40,9 +47,16 @@ func NewServer(port int, iface string, resolver *direct_use_en0.Resolver) (*sock
 		if err != nil {
 			return nil, err
 		}
-		// Resolve domain names via the custom resolver before dialing
+		// Resolve domain names via the custom resolver (or system default)
+		// before dialing through the bound interface
 		if net.ParseIP(host) == nil {
-			ips, err := resolver.LookupIPAddr(context.Background(), host)
+			var ips []net.IPAddr
+			var err error
+			if resolver != nil {
+				ips, err = resolver.LookupIPAddr(context.Background(), host)
+			} else {
+				ips, err = net.DefaultResolver.LookupIPAddr(context.Background(), host)
+			}
 			if err != nil {
 				return nil, err
 			}

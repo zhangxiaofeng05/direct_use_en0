@@ -58,6 +58,23 @@ curl -x http://127.0.0.1:20808 https://api.ip.sb/ip
 ```
 SOCKS5 is recommended.
 
+#### DNS resolution
+
+By default the proxy uses the system DNS resolver. Pass `-dns` to enable
+the custom DNS resolver, which queries DNS servers through the bound network
+interface instead of the system configuration:
+
+```bash
+# use system DNS (default)
+direct_use_en0 -port 20808
+
+# enable custom DNS resolver through en0
+direct_use_en0 -port 20808 -dns
+
+# custom DNS servers and mode (udp, tcp, doh, dot)
+direct_use_en0 -port 20808 -dns -dnsServers "8.8.8.8,1.1.1.1" -dnsMode udp
+```
+
 ### terminal use proxy
 ```bash
 # function to enable terminal proxy

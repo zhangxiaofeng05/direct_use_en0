@@ -167,8 +167,14 @@ func (p *Proxy) dialContext(
 		return p.dialIP(ctx, ip, port)
 	}
 
-	// resolve all addresses for the domain using the custom resolver
-	ips, err := p.resolver.LookupIPAddr(ctx, host)
+	// resolve all addresses for the domain using the custom resolver or
+	// fall back to the system default resolver when none is configured
+	var ips []net.IPAddr
+	if p.resolver != nil {
+		ips, err = p.resolver.LookupIPAddr(ctx, host)
+	} else {
+		ips, err = net.DefaultResolver.LookupIPAddr(ctx, host)
+	}
 	if err != nil {
 		return nil, err
 	}
